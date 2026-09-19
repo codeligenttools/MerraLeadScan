@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeadScan AI - Intelligent Lead Prospecting & Contact Finder</title>
+  <meta name="description" content="AI-powered lead discovery and contact extraction engine. Scan the web for matching prospects with zero-cost AI limits.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css?v=3.1">
+</head>
+<body>
+  <!-- Background Glows -->
+  <div class="glow-sphere glow-1"></div>
+  <div class="glow-sphere glow-2"></div>
+  <div class="glow-sphere glow-3"></div>
+
+  <!-- Main App Shell -->
+  <div class="app-container">
+    <!-- Top Navigation Bar -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-wrap">
+          <div class="logo-icon">
+            <span class="radar-ping"></span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="m4.93 4.93 4.24 4.24"></path>
+              <path d="m14.83 9.17 4.24-4.24"></path>
+              <path d="m14.83 14.83 4.24 4.24"></path>
+              <path d="m9.17 14.83-4.24 4.24"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </div>
+          <div class="logo-text-wrap">
+            <h1 class="logo-title">LeadScan <span class="badge-ai">AI</span></h1>
+            <p class="logo-subtitle">Intelligent Web Prospecting & Contact Finder</p>
+          </div>
+        </div>
+
+        <!-- Main Navigation Tabs -->
+        <nav class="nav-tabs">
+          <button class="nav-tab active" id="tabBtnDashboard" onclick="switchView('dashboard')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <span>Team Dashboard</span>
+          </button>
+          <button class="nav-tab" id="tabBtnProjects" onclick="switchView('projects')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            <span>Projects</span>
+            <span class="nav-pill-count" id="navProjectCount">1</span>
+          </button>
+          <button class="nav-tab" id="tabBtnLeads" onclick="switchView('leads')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="12 8 8 12 12 16 16 12 12 8"></polygon></svg>
+            <span>Leads Explorer</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="header-right">
+        <!-- Live AI Cost Guard Badge (Single-Line Ultra Clean) -->
+        <div class="cost-guard-badge" id="budgetBadge" title="Click to adjust AI Budget & Cost Limits">
+          <div class="cost-dot active"></div>
+          <span class="cost-text">AI Budget: <strong id="budgetDisplay">$0.00 / $2.00</strong></span>
+        </div>
+
+        <button class="btn btn-secondary" id="btnOpenSettings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          Settings
+        </button>
+
+        <button class="btn btn-primary" id="btnNewProject">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          New Project
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-body">
+
+      <!-- ================= VIEW 1: TEAM DASHBOARD ================= -->
+      <div id="viewDashboard" class="view-section">
+        <!-- Dashboard Greeting & Summary -->
+        <div class="dash-banner glass-card">
+          <div class="dash-banner-text">
+            <h2>Welcome to LeadScan Team Central</h2>
+            <p>Real-time lead monitoring, pipeline status, and AI-powered outreach recommendations.</p>
+          </div>
+          <div class="dash-banner-actions">
+            <button class="btn btn-accent" onclick="switchView('leads')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              Explore Active Leads
+            </button>
+          </div>
+        </div>
+
+        <!-- Dashboard KPI Metric Tiles -->
+        <section class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-icon metric-purple">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <div>
+              <p class="metric-label">Active Projects</p>
+              <h3 class="metric-value" id="dashTotalProjects">1</h3>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon metric-cyan">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+            <div>
+              <p class="metric-label">Total Leads Found</p>
+              <h3 class="metric-value" id="dashTotalLeads">0</h3>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon metric-rose">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+            <div>
+              <p class="metric-label">No Website (Prime ⭐)</p>
+              <h3 class="metric-value" id="dashNoWebsiteLeads">0</h3>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon metric-emerald">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            </div>
+            <div>
+              <p class="metric-label">High Match (80%+)</p>
+              <h3 class="metric-value" id="dashHighMatchLeads">0</h3>
+            </div>
+          </div>
+        </section>
+
+        <!-- Pipeline Progress Bar -->
+        <div class="glass-card pipeline-card">
+          <div class="pipeline-header">
+            <h4>Sales Pipeline Status</h4>
+            <div class="pipeline-legend">
+              <span class="legend-dot dot-new"></span> New: <strong id="pipeNewCount">0</strong>
+              <span class="legend-dot dot-saved" style="margin-left: 12px;"></span> Saved: <strong id="pipeSavedCount">0</strong>
+              <span class="legend-dot dot-contacted" style="margin-left: 12px;"></span> Contacted: <strong id="pipeContactedCount">0</strong>
+            </div>
+          </div>
+          <div class="pipeline-bar">
+            <div class="pipeline-segment seg-new" id="segNew" style="width: 70%"></div>
+            <div class="pipeline-segment seg-saved" id="segSaved" style="width: 20%"></div>
+            <div class="pipeline-segment seg-contacted" id="segContacted" style="width: 10%"></div>
+          </div>
+        </div>
+
+        <!-- AI Strategic Recommendations Feed -->
+        <div class="ai-recommendations-section">
+          <div class="section-title-row">
+            <div class="ai-title-wrap">
+              <span class="ai-sparkle">✨</span>
+              <h3>AI Strategic Recommendations for Outreach Team</h3>
+            </div>
+            <span class="badge-ai">Live Intelligence</span>
+          </div>
+          <div class="recommendations-grid" id="aiRecommendationsGrid">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= VIEW 2: ALL PROJECTS LIST ================= -->
+      <div id="viewProjects" class="view-section hidden">
+        <div class="projects-view-header">
+          <div>
+            <h2>Monitored Projects</h2>
+            <p class="subtitle">Click any project to view its matching leads, edit search criteria, or launch scans.</p>
+          </div>
+          <button class="btn btn-primary" onclick="document.getElementById('modalNewProject').classList.remove('hidden')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Add New Project
+          </button>
+        </div>
+
+        <div class="projects-grid" id="allProjectsGrid">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      <!-- ================= VIEW 3: LEADS EXPLORER ================= -->
+      <div id="viewLeads" class="view-section hidden">
+      <!-- Project Selection & Overview Card -->
+      <section class="glass-card project-bar">
+        <div class="project-selector-row">
+          <div class="selector-wrap">
+            <label for="projectSelect">Active Project:</label>
+            <select id="projectSelect" class="styled-select"></select>
+          </div>
+
+          <div class="project-actions">
+            <div class="scan-limit-wrap">
+              <label for="maxLeadsInput">Scan Depth:</label>
+              <select id="maxLeadsInput" class="styled-select-sm">
+                <option value="5">5 Leads (Fastest)</option>
+                <option value="10" selected>10 Leads (Recommended)</option>
+                <option value="20">20 Leads (Deep Scan)</option>
+              </select>
+            </div>
+
+            <button class="btn btn-accent pulse-btn" id="btnStartScan">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              Scan Internet for Leads
+            </button>
+          </div>
+        </div>
+
+        <!-- Project Details Summary -->
+        <div class="project-meta-box" id="projectMetaBox">
+          <div class="project-header-info">
+            <h2 id="projTitle" class="proj-title">Loading Project...</h2>
+            <a id="projUrlLink" href="#" target="_blank" class="proj-link"></a>
+          </div>
+          <p id="projDesc" class="proj-desc"></p>
+          <div class="proj-tags" id="projTags"></div>
+        </div>
+      </section>
+
+      <!-- Scanning Progress Tracker (Hidden until scan starts) -->
+      <section class="glass-card scan-tracker hidden" id="scanTracker">
+        <div class="tracker-header">
+          <div class="tracker-status">
+            <div class="scanner-anim"></div>
+            <div>
+              <h3 id="scanStatusTitle">Scanning the Internet...</h3>
+              <p id="scanStatusSubtitle">Discovering matching businesses and extracting contact details</p>
+            </div>
+          </div>
+          <span class="scan-time-badge" id="scanTimeBadge">Searching...</span>
+        </div>
+
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="scanProgressFill"></div>
+        </div>
+
+        <div class="tracker-steps">
+          <div class="step-item active" id="step1">
+            <span class="step-dot"></span>
+            <span>1. ICP & Keyword Analysis</span>
+          </div>
+          <div class="step-item" id="step2">
+            <span class="step-dot"></span>
+            <span>2. Web & Directory Scanning</span>
+          </div>
+          <div class="step-item" id="step3">
+            <span class="step-dot"></span>
+            <span>3. Contact Extraction</span>
+          </div>
+          <div class="step-item" id="step4">
+            <span class="step-dot"></span>
+            <span>4. AI Fit Scoring & Pitches</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Metrics Row -->
+      <section class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-icon metric-purple">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </div>
+          <div>
+            <p class="metric-label">Total Leads</p>
+            <h3 class="metric-value" id="metricTotalLeads">0</h3>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon metric-rose">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          </div>
+          <div>
+            <p class="metric-label">No Website (Prime ⭐)</p>
+            <h3 class="metric-value" id="metricNoWebsite">0</h3>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon metric-emerald">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          </div>
+          <div>
+            <p class="metric-label">High Match (80%+)</p>
+            <h3 class="metric-value" id="metricHighMatch">0</h3>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon metric-cyan">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+          </div>
+          <div>
+            <p class="metric-label">Verified Emails</p>
+            <h3 class="metric-value" id="metricWithEmails">0</h3>
+          </div>
+        </div>
+      </section>
+
+      <!-- Leads Section -->
+      <section class="leads-section">
+        <div class="leads-header">
+          <div class="filter-controls">
+            <div class="search-input-wrap">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="leadSearchInput" placeholder="Filter by clinic, advocate, name...">
+            </div>
+
+            <select id="presenceFilter" class="styled-select-sm">
+              <option value="all">All Web Presences</option>
+              <option value="no_website" selected>🔥 No Website (Prime Targets)</option>
+              <option value="social_only">📱 Social Profile Only (IG/FB)</option>
+              <option value="has_website">🌐 Has Website</option>
+            </select>
+
+            <select id="statusFilter" class="styled-select-sm">
+              <option value="all">All Statuses</option>
+              <option value="new">New</option>
+              <option value="saved">Saved</option>
+              <option value="contacted">Contacted</option>
+            </select>
+
+            <select id="scoreFilter" class="styled-select-sm">
+              <option value="0">All Match Scores</option>
+              <option value="80">Match ≥ 80%</option>
+              <option value="90">Match ≥ 90%</option>
+            </select>
+
+            <label class="checkbox-label">
+              <input type="checkbox" id="hasEmailFilter">
+              <span>Has Email</span>
+            </label>
+          </div>
+
+          <div class="export-actions">
+            <button class="btn btn-secondary" id="btnExportCSV">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Export to CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Leads List -->
+        <div class="leads-container" id="leadsContainer">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state hidden" id="emptyState">
+          <div class="empty-icon">🔍</div>
+          <h3>No matching leads found</h3>
+          <p>Click "Scan Internet for Leads" above to start discovering prospects for this project.</p>
+        </div>
+      </section>
+      </div> <!-- End of viewLeads -->
+    </main>
+  </div>
+
+  <!-- MODAL: New / Edit Project -->
+  <div class="modal-overlay hidden" id="modalNewProject">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2 id="modalProjectHeading">Add New Project</h2>
+          <p class="modal-subtitle">Configure project details and exact AI lead search criteria</p>
+        </div>
+        <button class="btn-close" id="btnCloseNewProj">&times;</button>
+      </div>
+      <form id="formNewProject">
+        <input type="hidden" id="editProjectId" value="">
+
+        <div class="form-group">
+          <label for="inputProjName">Project Name *</label>
+          <input type="text" id="inputProjName" required placeholder="e.g. Entepage, AI Voice Assistant, SaaS CRM">
+        </div>
+
+        <div class="form-group">
+          <label for="inputProjUrl">Project Website URL (Optional)</label>
+          <input type="url" id="inputProjUrl" placeholder="https://example.com">
+        </div>
+
+        <div class="form-group">
+          <label for="inputProjDesc">Project Description *</label>
+          <textarea id="inputProjDesc" rows="3" required placeholder="Describe what your product/service does, its key benefits, and who it helps..."></textarea>
+        </div>
+
+        <!-- AI Search Criteria Configuration -->
+        <div class="form-group">
+          <div class="label-with-link">
+            <label for="inputProjCriteria">🎯 Target Search Criteria & Ideal Lead Profile *</label>
+            <span class="help-text">Directs the AI on what leads to find</span>
+          </div>
+          <textarea id="inputProjCriteria" rows="3" required placeholder="e.g. Target businesses with NO website or only social media (Instagram/FB) profiles. Prioritize local clinics, doctors, advocates/lawyers, CAs, and consultants who receive inquiries via WhatsApp/phone."></textarea>
+          
+          <div class="criteria-presets">
+            <span class="preset-label">Quick Presets:</span>
+            <button type="button" class="preset-chip" onclick="applyPresetCriteria('no_website')">🔥 No Website (Clinics, Advocates, Doctors)</button>
+            <button type="button" class="preset-chip" onclick="applyPresetCriteria('social_only')">📱 Social Profile Only (IG/FB)</button>
+            <button type="button" class="preset-chip" onclick="applyPresetCriteria('b2b')">🏢 B2B Companies Needing Revamp</button>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="inputProjIndustry">Target Industry / Niche</label>
+            <input type="text" id="inputProjIndustry" placeholder="e.g. Healthcare, Legal, Retail, Startups">
+          </div>
+          <div class="form-group">
+            <label for="inputProjRegion">Target Region</label>
+            <input type="text" id="inputProjRegion" placeholder="e.g. India, United States, Global">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btnCancelNewProj">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveProject">Save Project</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Settings & Cost Limiter -->
+  <div class="modal-overlay hidden" id="modalSettings">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2>AI & Budget Limiter Settings</h2>
+          <p class="modal-subtitle">Control your spending with hard budget caps and free fallback</p>
+        </div>
+        <button class="btn-close" id="btnCloseSettings">&times;</button>
+      </div>
+
+      <form id="formSettings">
+        <!-- AI Provider Selection -->
+        <div class="form-group">
+          <label for="selectProvider">AI Engine Provider</label>
+          <select id="selectProvider" class="styled-select">
+            <option value="gemini">Google Gemini (Recommended - Generous Free Tier)</option>
+            <option value="openai">OpenAI (gpt-4o-mini)</option>
+            <option value="free_heuristics">100% Free Local Heuristic Engine ($0.00)</option>
+          </select>
+        </div>
+
+        <!-- Gemini API Key -->
+        <div class="form-group" id="groupGeminiKey">
+          <div class="label-with-link">
+            <label for="inputGeminiKey">Google Gemini API Key</label>
+            <a href="https://aistudio.google.com/" target="_blank" class="text-link">Get Free Key (Google AI Studio) &rarr;</a>
+          </div>
+          <input type="password" id="inputGeminiKey" placeholder="AIzaSy... (Leave empty to use Free Heuristics)">
+          <span class="help-text">Free tier offers up to 15 requests/min with zero cost.</span>
+        </div>
+
+        <!-- OpenAI API Key -->
+        <div class="form-group hidden" id="groupOpenAIKey">
+          <label for="inputOpenAIKey">OpenAI API Key</label>
+          <input type="password" id="inputOpenAIKey" placeholder="sk-...">
+          <span class="help-text">Uses gpt-4o-mini (~$0.15 per million tokens).</span>
+        </div>
+
+        <!-- Cost Guard Hard Limit -->
+        <div class="cost-guard-box">
+          <div class="box-header">
+            <h4>Cost Guard Safeguards</h4>
+            <span class="badge-active">Active</span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="inputBudgetCap">Maximum Spending Cap ($ USD)</label>
+              <input type="number" id="inputBudgetCap" step="0.50" min="0" value="2.00">
+            </div>
+            <div class="form-group">
+              <label for="inputMaxLeadsSetting">Default Max Leads / Scan</label>
+              <input type="number" id="inputMaxLeadsSetting" min="3" max="30" value="10">
+            </div>
+          </div>
+
+          <div class="checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="checkEnableCostGuard" checked>
+              <span><strong>Enforce Hard Spending Cap:</strong> Immediately pause paid AI calls if limit is exceeded.</span>
+            </label>
+
+            <label class="checkbox-label">
+              <input type="checkbox" id="checkFallbackFree" checked>
+              <span><strong>Seamless Free Fallback:</strong> Automatically switch to free local heuristic engine when cap is reached (never stops scanning).</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Live Usage Summary -->
+        <div class="usage-stats-box">
+          <div class="stat-row">
+            <span>Total AI Calls Made:</span>
+            <strong id="statCalls">0</strong>
+          </div>
+          <div class="stat-row">
+            <span>Total Tokens Consumed:</span>
+            <strong id="statTokens">0</strong>
+          </div>
+          <div class="stat-row">
+            <span>Current Total Spend:</span>
+            <strong id="statSpend" class="text-emerald">$0.0000</strong>
+          </div>
+          <div class="stat-row">
+            <span>Remaining Budget:</span>
+            <strong id="statRemaining">$2.0000</strong>
+          </div>
+        </div>
+
+        <div class="modal-footer space-between">
+          <button type="button" class="btn btn-danger-outline" id="btnResetUsage">Reset Usage Stats</button>
+          <div>
+            <button type="button" class="btn btn-secondary" id="btnCancelSettings">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: View Generated Pitch -->
+  <div class="modal-overlay hidden" id="modalPitch">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2>AI Cold Outreach Pitch</h2>
+          <p class="modal-subtitle" id="pitchLeadName">Tailored for Prospect</p>
+        </div>
+        <button class="btn-close" id="btnClosePitch">&times;</button>
+      </div>
+
+      <div class="pitch-content-wrap">
+        <textarea id="pitchTextarea" rows="9" readonly></textarea>
+      </div>
+
+      <div class="modal-footer space-between">
+        <span class="pitch-tip">💡 Ready to send via Email, WhatsApp, or LinkedIn.</span>
+        <button class="btn btn-primary" id="btnCopyPitch">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          Copy to Clipboard
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast-notification hidden" id="toast"></div>
+
+  <script src="/app.js?v=3.1"></script>
+</body>
+</html>
