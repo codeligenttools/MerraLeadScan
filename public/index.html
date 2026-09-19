@@ -8,7 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css?v=3.1">
+  <link rel="icon" type="image/jpeg" href="/logo.jpg">
+  <link rel="stylesheet" href="/style.css?v=3.2">
 </head>
 <body>
   <!-- Background Glows -->
@@ -21,18 +22,8 @@
     <!-- Top Navigation Bar -->
     <header class="app-header">
       <div class="header-left">
-        <div class="logo-wrap">
-          <div class="logo-icon">
-            <span class="radar-ping"></span>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="m4.93 4.93 4.24 4.24"></path>
-              <path d="m14.83 9.17 4.24-4.24"></path>
-              <path d="m14.83 14.83 4.24 4.24"></path>
-              <path d="m9.17 14.83-4.24 4.24"></path>
-              <circle cx="12" cy="12" r="3"></circle>
-            </svg>
-          </div>
+        <div class="logo-wrap" onclick="switchView('dashboard')">
+          <img src="/logo.jpg" alt="MerraLeadScan Logo" class="brand-logo-img">
           <div class="logo-text-wrap">
             <h1 class="logo-title">MerraLeadScan <span class="badge-ai">AI</span></h1>
             <p class="logo-subtitle">Intelligent Web Prospecting & Contact Finder</p>
