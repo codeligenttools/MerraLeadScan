@@ -1,5 +1,5 @@
 {
-  "name": "leadscan-ai",
+  "name": "merraleadscan",
   "version": "1.0.0",
   "description": "Intelligent, low-cost lead generation and internet scanning application with AI matching, contact extraction, and cost guard.",
   "main": "server.js",

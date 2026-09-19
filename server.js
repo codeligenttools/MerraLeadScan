@@ -60,7 +60,7 @@ seedInitialProject();
 
 app.listen(PORT, () => {
   console.log(`====================================================`);
-  console.log(`🚀 LeadScan AI is running at http://localhost:${PORT}`);
+  console.log(`🚀 MerraLeadScan is running at http://localhost:${PORT}`);
   console.log(`💡 Cost Guard & Budget Limiter Active`);
   console.log(`====================================================`);
 });

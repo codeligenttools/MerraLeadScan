@@ -1,4 +1,4 @@
-// LeadScan AI - Frontend Application Logic
+// MerraLeadScan - Frontend Application Logic
 
 let state = {
   currentView: 'dashboard', // 'dashboard' | 'projects' | 'leads'

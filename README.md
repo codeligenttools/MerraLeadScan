@@ -1,6 +1,6 @@
-# LeadScan AI (MerraLeadScan)
+# MerraLeadScan
 
-**LeadScan AI** is an intelligent, low-cost lead generation and internet prospecting platform. It discovers high-converting business leads across the web, extracts verified contact information (phones, WhatsApp, emails, social handles), scores ICP (Ideal Customer Profile) fit, and drafts personalized outreach pitches—all with strict zero-cost AI limits.
+**MerraLeadScan** is an intelligent, low-cost lead generation and internet prospecting platform. It discovers high-converting business leads across the web, extracts verified contact information (phones, WhatsApp, emails, social handles), scores ICP (Ideal Customer Profile) fit, and drafts personalized outreach pitches—all with strict zero-cost AI limits.
 
 ---
 
@@ -42,7 +42,7 @@ PORT=3000
 GEMINI_API_KEY=your_gemini_key_here  # Optional
 OPENAI_API_KEY=your_openai_key_here  # Optional
 ```
-> **Note**: LeadScan works fully **without** any API keys using its built-in Free Heuristic Engine!
+> **Note**: MerraLeadScan works fully **without** any API keys using its built-in Free Heuristic Engine!
 
 ### 3. Run the Application
 
