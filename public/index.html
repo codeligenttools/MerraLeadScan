@@ -430,91 +430,208 @@
 
   <!-- MODAL: Settings & Cost Limiter -->
   <div class="modal-overlay hidden" id="modalSettings">
-    <div class="modal-card">
+    <div class="modal-card modal-card-lg">
       <div class="modal-header">
         <div>
-          <h2>AI & Budget Limiter Settings</h2>
-          <p class="modal-subtitle">Control your spending with hard budget caps and free fallback</p>
+          <h2>Application & Outreach Settings</h2>
+          <p class="modal-subtitle">Configure AI providers, budget guard, and direct outreach channels</p>
         </div>
         <button class="btn-close" id="btnCloseSettings">&times;</button>
       </div>
 
+      <!-- Settings Tabs Switcher -->
+      <div class="settings-tabs-bar">
+        <button type="button" class="settings-tab-btn active" id="btnSettingsTabAI" onclick="switchSettingsTab('ai')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          AI & Budget Guard
+        </button>
+        <button type="button" class="settings-tab-btn" id="btnSettingsTabOutreach" onclick="switchSettingsTab('outreach')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+          Outreach (Email & WhatsApp)
+        </button>
+      </div>
+
       <form id="formSettings">
-        <!-- AI Provider Selection -->
-        <div class="form-group">
-          <label for="selectProvider">AI Engine Provider</label>
-          <select id="selectProvider" class="styled-select">
-            <option value="gemini">Google Gemini (Recommended - Generous Free Tier)</option>
-            <option value="openai">OpenAI (gpt-4o-mini)</option>
-            <option value="free_heuristics">100% Free Local Heuristic Engine ($0.00)</option>
-          </select>
-        </div>
-
-        <!-- Gemini API Key -->
-        <div class="form-group" id="groupGeminiKey">
-          <div class="label-with-link">
-            <label for="inputGeminiKey">Google Gemini API Key</label>
-            <a href="https://aistudio.google.com/" target="_blank" class="text-link">Get Free Key (Google AI Studio) &rarr;</a>
-          </div>
-          <input type="password" id="inputGeminiKey" placeholder="AIzaSy... (Leave empty to use Free Heuristics)">
-          <span class="help-text">Free tier offers up to 15 requests/min with zero cost.</span>
-        </div>
-
-        <!-- OpenAI API Key -->
-        <div class="form-group hidden" id="groupOpenAIKey">
-          <label for="inputOpenAIKey">OpenAI API Key</label>
-          <input type="password" id="inputOpenAIKey" placeholder="sk-...">
-          <span class="help-text">Uses gpt-4o-mini (~$0.15 per million tokens).</span>
-        </div>
-
-        <!-- Cost Guard Hard Limit -->
-        <div class="cost-guard-box">
-          <div class="box-header">
-            <h4>Cost Guard Safeguards</h4>
-            <span class="badge-active">Active</span>
+        <!-- ================= SETTINGS TAB 1: AI & BUDGET ================= -->
+        <div id="settingsSectionAI" class="settings-section">
+          <!-- AI Provider Selection -->
+          <div class="form-group">
+            <label for="selectProvider">AI Engine Provider</label>
+            <select id="selectProvider" class="styled-select">
+              <option value="gemini">Google Gemini (Recommended - Generous Free Tier)</option>
+              <option value="openai">OpenAI (gpt-4o-mini)</option>
+              <option value="free_heuristics">100% Free Local Heuristic Engine ($0.00)</option>
+            </select>
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label for="inputBudgetCap">Maximum Spending Cap ($ USD)</label>
-              <input type="number" id="inputBudgetCap" step="0.50" min="0" value="2.00">
+          <!-- Gemini API Key -->
+          <div class="form-group" id="groupGeminiKey">
+            <div class="label-with-link">
+              <label for="inputGeminiKey">Google Gemini API Key</label>
+              <a href="https://aistudio.google.com/" target="_blank" class="text-link">Get Free Key (Google AI Studio) &rarr;</a>
             </div>
-            <div class="form-group">
-              <label for="inputMaxLeadsSetting">Default Max Leads / Scan</label>
-              <input type="number" id="inputMaxLeadsSetting" min="3" max="30" value="10">
+            <input type="password" id="inputGeminiKey" placeholder="AIzaSy... (Leave empty to use Free Heuristics)">
+            <span class="help-text">Free tier offers up to 15 requests/min with zero cost.</span>
+          </div>
+
+          <!-- OpenAI API Key -->
+          <div class="form-group hidden" id="groupOpenAIKey">
+            <label for="inputOpenAIKey">OpenAI API Key</label>
+            <input type="password" id="inputOpenAIKey" placeholder="sk-...">
+            <span class="help-text">Uses gpt-4o-mini (~$0.15 per million tokens).</span>
+          </div>
+
+          <!-- Cost Guard Hard Limit -->
+          <div class="cost-guard-box">
+            <div class="box-header">
+              <h4>Cost Guard Safeguards</h4>
+              <span class="badge-active">Active</span>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="inputBudgetCap">Maximum Spending Cap ($ USD)</label>
+                <input type="number" id="inputBudgetCap" step="0.50" min="0" value="2.00">
+              </div>
+              <div class="form-group">
+                <label for="inputMaxLeadsSetting">Default Max Leads / Scan</label>
+                <input type="number" id="inputMaxLeadsSetting" min="3" max="30" value="10">
+              </div>
+            </div>
+
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="checkEnableCostGuard" checked>
+                <span><strong>Enforce Hard Spending Cap:</strong> Immediately pause paid AI calls if limit is exceeded.</span>
+              </label>
+
+              <label class="checkbox-label">
+                <input type="checkbox" id="checkFallbackFree" checked>
+                <span><strong>Seamless Free Fallback:</strong> Automatically switch to free local heuristic engine when cap is reached (never stops scanning).</span>
+              </label>
             </div>
           </div>
 
-          <div class="checkbox-group">
-            <label class="checkbox-label">
-              <input type="checkbox" id="checkEnableCostGuard" checked>
-              <span><strong>Enforce Hard Spending Cap:</strong> Immediately pause paid AI calls if limit is exceeded.</span>
-            </label>
-
-            <label class="checkbox-label">
-              <input type="checkbox" id="checkFallbackFree" checked>
-              <span><strong>Seamless Free Fallback:</strong> Automatically switch to free local heuristic engine when cap is reached (never stops scanning).</span>
-            </label>
+          <!-- Live Usage Summary -->
+          <div class="usage-stats-box">
+            <div class="stat-row">
+              <span>Total AI Calls Made:</span>
+              <strong id="statCalls">0</strong>
+            </div>
+            <div class="stat-row">
+              <span>Total Tokens Consumed:</span>
+              <strong id="statTokens">0</strong>
+            </div>
+            <div class="stat-row">
+              <span>Current Total Spend:</span>
+              <strong id="statSpend" class="text-emerald">$0.0000</strong>
+            </div>
+            <div class="stat-row">
+              <span>Remaining Budget:</span>
+              <strong id="statRemaining">$2.0000</strong>
+            </div>
           </div>
         </div>
 
-        <!-- Live Usage Summary -->
-        <div class="usage-stats-box">
-          <div class="stat-row">
-            <span>Total AI Calls Made:</span>
-            <strong id="statCalls">0</strong>
+        <!-- ================= SETTINGS TAB 2: OUTREACH (EMAIL & WHATSAPP) ================= -->
+        <div id="settingsSectionOutreach" class="settings-section hidden">
+          <!-- Email Configuration -->
+          <div class="channel-config-card">
+            <div class="channel-header">
+              <div class="channel-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                <h4>Email Outreach Configuration</h4>
+              </div>
+              <span class="badge-status">Configurable</span>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="inputEmailMode">Email Sending Mode</label>
+                <select id="inputEmailMode" class="styled-select" onchange="toggleSmtpFields()">
+                  <option value="mailto">Quick Launch (Default Email Client - mailto:)</option>
+                  <option value="smtp">Direct SMTP (Automated 1-Click Send via Server)</option>
+                </select>
+                <span class="help-text">Quick Launch requires zero setup. Direct SMTP sends automated emails via your mail server.</span>
+              </div>
+              <div class="form-group">
+                <label for="inputSenderName">Sender Display Name</label>
+                <input type="text" id="inputSenderName" placeholder="e.g. Entepage Team">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="inputSenderAddress">Sender Email Address</label>
+                <input type="email" id="inputSenderAddress" placeholder="e.g. sales@entepage.com">
+              </div>
+              <div class="form-group">
+                <label for="inputEmailDefaultSubject">Default Subject Line Template</label>
+                <input type="text" id="inputEmailDefaultSubject" placeholder="Custom Website for {{company}}">
+              </div>
+            </div>
+
+            <!-- SMTP Server Settings (Shown if mode === 'smtp') -->
+            <div id="smtpSettingsGroup" class="smtp-box hidden">
+              <h5>SMTP Server Credentials</h5>
+              <div class="form-row">
+                <div class="form-group" style="flex: 2;">
+                  <label for="inputSmtpHost">SMTP Host</label>
+                  <input type="text" id="inputSmtpHost" placeholder="smtp.gmail.com or mail.yourdomain.com">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                  <label for="inputSmtpPort">Port</label>
+                  <input type="number" id="inputSmtpPort" value="587">
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="inputSmtpUser">SMTP Username / Email</label>
+                  <input type="text" id="inputSmtpUser" placeholder="you@domain.com">
+                </div>
+                <div class="form-group">
+                  <label for="inputSmtpPass">SMTP Password / App Password</label>
+                  <input type="password" id="inputSmtpPass" placeholder="App Password">
+                </div>
+              </div>
+
+              <div class="form-row align-center" style="margin-top: 8px;">
+                <label class="checkbox-label" style="margin-bottom: 0;">
+                  <input type="checkbox" id="checkSmtpSecure">
+                  <span>Use SSL/TLS (Required for Port 465)</span>
+                </label>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnTestSmtp">
+                  Test SMTP Connection
+                </button>
+              </div>
+            </div>
           </div>
-          <div class="stat-row">
-            <span>Total Tokens Consumed:</span>
-            <strong id="statTokens">0</strong>
-          </div>
-          <div class="stat-row">
-            <span>Current Total Spend:</span>
-            <strong id="statSpend" class="text-emerald">$0.0000</strong>
-          </div>
-          <div class="stat-row">
-            <span>Remaining Budget:</span>
-            <strong id="statRemaining">$2.0000</strong>
+
+          <!-- WhatsApp Configuration -->
+          <div class="channel-config-card" style="margin-top: 18px;">
+            <div class="channel-header">
+              <div class="channel-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.969.585 1.961.905 3.01.905 3.183 0 5.769-2.586 5.769-5.767.001-3.181-2.584-5.767-5.767-5.767zm7.554 5.766c-.001 4.167-3.39 7.556-7.555 7.556-1.332 0-2.573-.356-3.649-.974l-4.048 1.06 1.082-3.948c-.702-1.127-1.109-2.453-1.109-3.874.001-4.167 3.39-7.556 7.556-7.556 4.166 0 7.554 3.39 7.554 7.556z"/></svg>
+                <h4>WhatsApp Outreach Configuration</h4>
+              </div>
+              <span class="badge-status">Active</span>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="inputWhatsAppMode">WhatsApp Dispatch Mode</label>
+                <select id="inputWhatsAppMode" class="styled-select">
+                  <option value="app">WhatsApp Universal (Desktop App / Mobile App via wa.me)</option>
+                  <option value="web">WhatsApp Web (web.whatsapp.com)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="inputWhatsAppCC">Default Country Code</label>
+                <input type="text" id="inputWhatsAppCC" value="91" placeholder="e.g. 91 for India, 1 for USA">
+                <span class="help-text">Automatically prepended to 10-digit phone numbers.</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -529,27 +646,60 @@
     </div>
   </div>
 
-  <!-- MODAL: View Generated Pitch -->
+  <!-- MODAL: View & Edit Generated Pitch -->
   <div class="modal-overlay hidden" id="modalPitch">
-    <div class="modal-card">
+    <div class="modal-card modal-card-lg">
       <div class="modal-header">
         <div>
-          <h2>AI Cold Outreach Pitch</h2>
+          <h2>Personalized Outreach Pitch</h2>
           <p class="modal-subtitle" id="pitchLeadName">Tailored for Prospect</p>
         </div>
         <button class="btn-close" id="btnClosePitch">&times;</button>
       </div>
 
+      <!-- Lead Contact Details Quick-Bar -->
+      <div class="pitch-contacts-bar">
+        <div class="form-group-inline">
+          <label><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg> Phone / WhatsApp:</label>
+          <input type="text" id="pitchRecipientPhone" class="styled-input-sm" placeholder="e.g. 9840123456">
+        </div>
+        <div class="form-group-inline">
+          <label><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg> Recipient Email:</label>
+          <input type="email" id="pitchRecipientEmail" class="styled-input-sm" placeholder="e.g. clinic@example.com">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="pitchEmailSubject">Email Subject Line:</label>
+        <input type="text" id="pitchEmailSubject" class="styled-input-sm" placeholder="Subject for email outreach...">
+      </div>
+
       <div class="pitch-content-wrap">
-        <textarea id="pitchTextarea" rows="9" readonly></textarea>
+        <label for="pitchTextarea" class="label-pitch-edit">Edit Outreach Message:</label>
+        <textarea id="pitchTextarea" rows="10" placeholder="Type or edit your personalized cold pitch message here..."></textarea>
       </div>
 
       <div class="modal-footer space-between">
-        <span class="pitch-tip">💡 Ready to send via Email, WhatsApp, or LinkedIn.</span>
-        <button class="btn btn-primary" id="btnCopyPitch">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-          Copy to Clipboard
-        </button>
+        <div class="modal-footer-left">
+          <button type="button" class="btn btn-secondary" id="btnSavePitch" title="Save edited pitch to database">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+            Save Pitch
+          </button>
+          <button type="button" class="btn btn-secondary" id="btnCopyPitch">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            Copy
+          </button>
+        </div>
+        <div class="modal-footer-right">
+          <button type="button" class="btn btn-whatsapp" id="btnSendWhatsApp">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.969.585 1.961.905 3.01.905 3.183 0 5.769-2.586 5.769-5.767.001-3.181-2.584-5.767-5.767-5.767zm7.554 5.766c-.001 4.167-3.39 7.556-7.555 7.556-1.332 0-2.573-.356-3.649-.974l-4.048 1.06 1.082-3.948c-.702-1.127-1.109-2.453-1.109-3.874.001-4.167 3.39-7.556 7.556-7.556 4.166 0 7.554 3.39 7.554 7.556z"/></svg>
+            Send WhatsApp
+          </button>
+          <button type="button" class="btn btn-email" id="btnSendEmail">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+            Send Email
+          </button>
+        </div>
       </div>
     </div>
   </div>

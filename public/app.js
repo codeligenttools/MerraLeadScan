@@ -103,6 +103,33 @@ const btnClosePitch = document.getElementById('btnClosePitch');
 const btnCopyPitch = document.getElementById('btnCopyPitch');
 const pitchTextarea = document.getElementById('pitchTextarea');
 const pitchLeadName = document.getElementById('pitchLeadName');
+const pitchRecipientPhone = document.getElementById('pitchRecipientPhone');
+const pitchRecipientEmail = document.getElementById('pitchRecipientEmail');
+const pitchEmailSubject = document.getElementById('pitchEmailSubject');
+const btnSavePitch = document.getElementById('btnSavePitch');
+const btnSendWhatsApp = document.getElementById('btnSendWhatsApp');
+const btnSendEmail = document.getElementById('btnSendEmail');
+let currentPitchLeadId = null;
+
+// Settings Outreach Elements
+const btnSettingsTabAI = document.getElementById('btnSettingsTabAI');
+const btnSettingsTabOutreach = document.getElementById('btnSettingsTabOutreach');
+const settingsSectionAI = document.getElementById('settingsSectionAI');
+const settingsSectionOutreach = document.getElementById('settingsSectionOutreach');
+const inputEmailMode = document.getElementById('inputEmailMode');
+const inputSenderName = document.getElementById('inputSenderName');
+const inputSenderAddress = document.getElementById('inputSenderAddress');
+const inputEmailDefaultSubject = document.getElementById('inputEmailDefaultSubject');
+const smtpSettingsGroup = document.getElementById('smtpSettingsGroup');
+const inputSmtpHost = document.getElementById('inputSmtpHost');
+const inputSmtpPort = document.getElementById('inputSmtpPort');
+const checkSmtpSecure = document.getElementById('checkSmtpSecure');
+const inputSmtpUser = document.getElementById('inputSmtpUser');
+const inputSmtpPass = document.getElementById('inputSmtpPass');
+const btnTestSmtp = document.getElementById('btnTestSmtp');
+const inputWhatsAppMode = document.getElementById('inputWhatsAppMode');
+const inputWhatsAppCC = document.getElementById('inputWhatsAppCC');
+
 const toast = document.getElementById('toast');
 
 /* ----------------- INITIALIZATION & NAVIGATION ----------------- */
@@ -174,12 +201,156 @@ function setupEventListeners() {
     groupOpenAIKey.classList.toggle('hidden', e.target.value !== 'openai');
   });
 
-  // Modal: Pitch
+  // Modal: Pitch Actions
   btnClosePitch.addEventListener('click', () => modalPitch.classList.add('hidden'));
   btnCopyPitch.addEventListener('click', () => {
     navigator.clipboard.writeText(pitchTextarea.value);
     showToast('Pitch copied to clipboard!');
   });
+
+  // Save Pitch
+  btnSavePitch.addEventListener('click', async () => {
+    if (!currentPitchLeadId) return;
+    const newPitch = pitchTextarea.value.trim();
+    try {
+      btnSavePitch.disabled = true;
+      const res = await fetch(`/api/leads/${currentPitchLeadId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pitch_draft: newPitch })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const l = state.leads.find(x => x.id === currentPitchLeadId);
+        if (l) l.pitch_draft = newPitch;
+        showToast('Pitch saved successfully!');
+      } else {
+        showToast(data.error || 'Failed to save pitch');
+      }
+    } catch (err) {
+      showToast('Error saving pitch');
+    } finally {
+      btnSavePitch.disabled = false;
+    }
+  });
+
+  // Send WhatsApp
+  btnSendWhatsApp.addEventListener('click', async () => {
+    if (!currentPitchLeadId) return;
+    const phone = pitchRecipientPhone.value.trim();
+    const message = pitchTextarea.value.trim();
+    if (!phone) {
+      showToast('Please enter a WhatsApp phone number');
+      pitchRecipientPhone.focus();
+      return;
+    }
+
+    try {
+      btnSendWhatsApp.disabled = true;
+      const res = await fetch(`/api/leads/${currentPitchLeadId}/send-whatsapp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, message })
+      });
+      const data = await res.json();
+      if (data.success && data.whatsappUrl) {
+        window.open(data.whatsappUrl, '_blank');
+        const l = state.leads.find(x => x.id === currentPitchLeadId);
+        if (l) l.status = 'contacted';
+        renderLeads();
+        loadDashboard();
+        showToast('WhatsApp launched & Lead marked as Contacted!');
+      } else {
+        showToast(data.error || 'Failed to generate WhatsApp link');
+      }
+    } catch (err) {
+      showToast('Error preparing WhatsApp message');
+    } finally {
+      btnSendWhatsApp.disabled = false;
+    }
+  });
+
+  // Send Email
+  btnSendEmail.addEventListener('click', async () => {
+    if (!currentPitchLeadId) return;
+    const to = pitchRecipientEmail.value.trim();
+    const subject = pitchEmailSubject.value.trim() || 'Outreach from MerraLeadScan';
+    const body = pitchTextarea.value.trim();
+    if (!to) {
+      showToast('Please enter a recipient email address');
+      pitchRecipientEmail.focus();
+      return;
+    }
+
+    try {
+      btnSendEmail.disabled = true;
+      btnSendEmail.textContent = 'Sending...';
+      const res = await fetch(`/api/leads/${currentPitchLeadId}/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, subject, body })
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.mode === 'mailto' && data.mailtoUrl) {
+          window.location.href = data.mailtoUrl;
+          showToast('Email client opened & Lead marked as Contacted!');
+        } else {
+          showToast('Email sent successfully via SMTP!');
+        }
+        const l = state.leads.find(x => x.id === currentPitchLeadId);
+        if (l) l.status = 'contacted';
+        renderLeads();
+        loadDashboard();
+      } else {
+        showToast(data.error || 'Failed to send email');
+      }
+    } catch (err) {
+      showToast('Error dispatching email');
+    } finally {
+      btnSendEmail.disabled = false;
+      btnSendEmail.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+        Send Email
+      `;
+    }
+  });
+
+  // Test SMTP button
+  if (btnTestSmtp) {
+    btnTestSmtp.addEventListener('click', async () => {
+      const host = inputSmtpHost.value.trim();
+      const port = inputSmtpPort.value.trim();
+      const secure = checkSmtpSecure.checked;
+      const user = inputSmtpUser.value.trim();
+      const pass = inputSmtpPass.value.trim();
+      if (!host || !user) {
+        showToast('Please enter SMTP Host and Username');
+        return;
+      }
+
+      try {
+        btnTestSmtp.disabled = true;
+        btnTestSmtp.textContent = 'Testing...';
+        const res = await fetch('/api/outreach/test-smtp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ host, port, secure, user, pass })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('✅ SMTP Connection verified successfully!');
+        } else {
+          showToast(`❌ SMTP Error: ${data.error}`);
+        }
+      } catch (err) {
+        showToast('Failed to test SMTP connection');
+      } finally {
+        btnTestSmtp.disabled = false;
+        btnTestSmtp.textContent = 'Test SMTP Connection';
+      }
+    });
+  }
 }
 
 /* ----------------- DASHBOARD LOGIC ----------------- */
@@ -721,6 +892,21 @@ async function loadSettings() {
 
       groupGeminiKey.classList.toggle('hidden', selectProvider.value !== 'gemini');
       groupOpenAIKey.classList.toggle('hidden', selectProvider.value !== 'openai');
+
+      // Outreach Settings
+      if (inputEmailMode) inputEmailMode.value = state.settings.email_mode || 'mailto';
+      if (inputSenderName) inputSenderName.value = state.settings.email_sender_name || 'Entepage Team';
+      if (inputSenderAddress) inputSenderAddress.value = state.settings.email_sender_address || '';
+      if (inputEmailDefaultSubject) inputEmailDefaultSubject.value = state.settings.email_default_subject || 'Custom Website & WhatsApp Lead Routing for {{company}}';
+      if (inputSmtpHost) inputSmtpHost.value = state.settings.smtp_host || '';
+      if (inputSmtpPort) inputSmtpPort.value = state.settings.smtp_port || '587';
+      if (checkSmtpSecure) checkSmtpSecure.checked = state.settings.smtp_secure === 'true';
+      if (inputSmtpUser) inputSmtpUser.value = state.settings.smtp_user || '';
+      if (inputSmtpPass) inputSmtpPass.value = ''; // masked on server
+      if (inputWhatsAppMode) inputWhatsAppMode.value = state.settings.whatsapp_mode || 'app';
+      if (inputWhatsAppCC) inputWhatsAppCC.value = state.settings.whatsapp_country_code || '91';
+
+      toggleSmtpFields();
     }
   } catch (err) {
     console.error('Error loading settings:', err);
@@ -728,9 +914,30 @@ async function loadSettings() {
 }
 
 function openSettingsModal() {
+  switchSettingsTab('ai');
   loadUsage();
   loadSettings();
   modalSettings.classList.remove('hidden');
+}
+
+function switchSettingsTab(tabName) {
+  if (tabName === 'ai') {
+    btnSettingsTabAI?.classList.add('active');
+    btnSettingsTabOutreach?.classList.remove('active');
+    settingsSectionAI?.classList.remove('hidden');
+    settingsSectionOutreach?.classList.add('hidden');
+  } else {
+    btnSettingsTabOutreach?.classList.add('active');
+    btnSettingsTabAI?.classList.remove('active');
+    settingsSectionOutreach?.classList.remove('hidden');
+    settingsSectionAI?.classList.add('hidden');
+  }
+}
+
+function toggleSmtpFields() {
+  if (smtpSettingsGroup && inputEmailMode) {
+    smtpSettingsGroup.classList.toggle('hidden', inputEmailMode.value !== 'smtp');
+  }
 }
 
 async function handleSaveSettings(e) {
@@ -740,7 +947,18 @@ async function handleSaveSettings(e) {
     budget_cap_usd: inputBudgetCap.value,
     max_leads_per_scan: inputMaxLeadsSetting.value,
     enable_cost_guard: String(checkEnableCostGuard.checked),
-    fallback_to_free: String(checkFallbackFree.checked)
+    fallback_to_free: String(checkFallbackFree.checked),
+    // Outreach Settings
+    email_mode: inputEmailMode.value,
+    email_sender_name: inputSenderName.value.trim(),
+    email_sender_address: inputSenderAddress.value.trim(),
+    email_default_subject: inputEmailDefaultSubject.value.trim(),
+    smtp_host: inputSmtpHost.value.trim(),
+    smtp_port: inputSmtpPort.value.trim(),
+    smtp_secure: String(checkSmtpSecure.checked),
+    smtp_user: inputSmtpUser.value.trim(),
+    whatsapp_mode: inputWhatsAppMode.value,
+    whatsapp_country_code: inputWhatsAppCC.value.trim()
   };
 
   if (inputGeminiKey.value.trim()) {
@@ -748,6 +966,9 @@ async function handleSaveSettings(e) {
   }
   if (inputOpenAIKey.value.trim()) {
     payload.openai_api_key = inputOpenAIKey.value.trim();
+  }
+  if (inputSmtpPass.value.trim()) {
+    payload.smtp_pass = inputSmtpPass.value.trim();
   }
 
   try {
@@ -758,12 +979,12 @@ async function handleSaveSettings(e) {
     });
     const data = await res.json();
     if (data.success) {
+      showToast('Settings saved successfully!');
       modalSettings.classList.add('hidden');
       await loadUsage();
-      showToast('Settings & Cost Guard saved!');
     }
   } catch (err) {
-    showToast('Failed to save settings.');
+    showToast('Failed to save settings');
   }
 }
 
@@ -804,8 +1025,21 @@ function viewPitch(leadId) {
   const lead = state.leads.find(l => l.id === leadId);
   if (!lead) return;
 
+  currentPitchLeadId = leadId;
   pitchLeadName.textContent = `Tailored for ${lead.company_name} (${lead.website_url || 'No Website'})`;
   pitchTextarea.value = lead.pitch_draft || 'No pitch draft generated.';
+
+  // Prefill contact details
+  const primaryPhone = (lead.phones && lead.phones.length > 0) ? lead.phones[0] : '';
+  const primaryEmail = (lead.emails && lead.emails.length > 0) ? lead.emails[0] : '';
+  if (pitchRecipientPhone) pitchRecipientPhone.value = primaryPhone;
+  if (pitchRecipientEmail) pitchRecipientEmail.value = primaryEmail;
+
+  const defaultSubj = state.settings?.email_default_subject || 'Custom Website & WhatsApp Integration for {{company}}';
+  if (pitchEmailSubject) {
+    pitchEmailSubject.value = defaultSubj.replace('{{company}}', lead.company_name);
+  }
+
   modalPitch.classList.remove('hidden');
 }
 
@@ -851,6 +1085,8 @@ window.deleteLead = deleteLead;
 window.viewPitch = viewPitch;
 window.switchView = switchView;
 window.applyPresetCriteria = applyPresetCriteria;
+window.switchSettingsTab = switchSettingsTab;
+window.toggleSmtpFields = toggleSmtpFields;
 window.openCreateProjectModal = openCreateProjectModal;
 window.openEditProject = openEditProject;
 window.selectProjectAndOpenLeads = selectProjectAndOpenLeads;

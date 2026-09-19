@@ -7,15 +7,22 @@
     "start": "node server.js",
     "dev": "node --watch server.js"
   },
-  "keywords": ["lead-generation", "ai", "web-scraper", "osint", "sales-intelligence"],
+  "keywords": [
+    "lead-generation",
+    "ai",
+    "web-scraper",
+    "osint",
+    "sales-intelligence"
+  ],
   "author": "Antigravity",
   "license": "MIT",
   "dependencies": {
     "axios": "^1.7.9",
+    "better-sqlite3": "^11.8.1",
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "better-sqlite3": "^11.8.1"
+    "nodemailer": "^10.0.10"
   }
 }

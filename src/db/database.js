@@ -81,7 +81,19 @@ function initDefaultSettings() {
     budget_cap_usd: '2.00', // Hard cap limit in USD (e.g. $2.00)
     enable_cost_guard: 'true',
     fallback_to_free: 'true', // Seamlessly fallback to free local heuristics if budget cap is hit
-    max_leads_per_scan: '10'
+    max_leads_per_scan: '10',
+    // Outreach Settings
+    email_mode: 'mailto', // 'mailto' | 'smtp'
+    email_sender_name: 'Entepage Team',
+    email_sender_address: '',
+    email_default_subject: 'Custom Website & WhatsApp Lead Routing for {{company}}',
+    smtp_host: '',
+    smtp_port: '587',
+    smtp_secure: 'false',
+    smtp_user: '',
+    smtp_pass: '',
+    whatsapp_mode: 'app', // 'app' (wa.me) | 'web' (web.whatsapp.com)
+    whatsapp_country_code: '91'
   };
 
   for (const [key, value] of Object.entries(defaults)) {

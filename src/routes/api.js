@@ -4,6 +4,7 @@ const db = require('../db/database');
 const ScannerService = require('../services/scannerService');
 const AIService = require('../services/aiService');
 const UsageGuard = require('../services/usageGuard');
+const OutreachService = require('../services/outreachService');
 
 /* ------------------- DASHBOARD & TEAM MONITORING ------------------- */
 
@@ -202,14 +203,78 @@ router.get('/projects/:id/leads', (req, res) => {
   }
 });
 
-// Update lead status
+// Update lead status and/or pitch draft
 router.patch('/leads/:id', (req, res) => {
   try {
-    const { status } = req.body;
-    db.prepare('UPDATE leads SET status = ? WHERE id = ?').run(status, req.params.id);
-    res.json({ success: true });
+    const { status, pitch_draft } = req.body;
+    if (pitch_draft !== undefined) {
+      db.prepare('UPDATE leads SET pitch_draft = ? WHERE id = ?').run(pitch_draft, req.params.id);
+    }
+    if (status !== undefined) {
+      db.prepare('UPDATE leads SET status = ? WHERE id = ?').run(status, req.params.id);
+    }
+    const updated = db.prepare('SELECT * FROM leads WHERE id = ?').get(req.params.id);
+    res.json({ success: true, lead: updated });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Dispatch Email to Lead (via SMTP or mailto)
+router.post('/leads/:id/send-email', async (req, res) => {
+  try {
+    const leadId = req.params.id;
+    const { to, subject, body } = req.body;
+    if (!to) {
+      return res.status(400).json({ success: false, error: 'Recipient email address is required' });
+    }
+
+    const mode = OutreachService.getSetting('email_mode', 'mailto');
+    if (mode === 'smtp') {
+      const result = await OutreachService.sendEmailViaSMTP({
+        to,
+        subject: subject || 'Outreach from MerraLeadScan',
+        body: body || '',
+        leadId
+      });
+      return res.json({ success: true, mode: 'smtp', message: 'Email sent successfully via SMTP!', details: result });
+    } else {
+      // Mark contacted and return mailto URL for direct client launch
+      db.prepare("UPDATE leads SET status = 'contacted' WHERE id = ?").run(leadId);
+      const mailtoUrl = OutreachService.generateMailtoLink(to, subject, body);
+      return res.json({ success: true, mode: 'mailto', mailtoUrl });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Dispatch WhatsApp to Lead
+router.post('/leads/:id/send-whatsapp', (req, res) => {
+  try {
+    const leadId = req.params.id;
+    const { phone, message } = req.body;
+    if (!phone) {
+      return res.status(400).json({ success: false, error: 'Recipient phone number is required' });
+    }
+
+    const whatsappUrl = OutreachService.generateWhatsAppLink(phone, message);
+    db.prepare("UPDATE leads SET status = 'contacted' WHERE id = ?").run(leadId);
+
+    res.json({ success: true, whatsappUrl });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Test SMTP connection
+router.post('/outreach/test-smtp', async (req, res) => {
+  try {
+    const { host, port, secure, user, pass } = req.body;
+    const result = await OutreachService.testSMTPConnection({ host, port, secure, user, pass });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
   }
 });
 
@@ -298,6 +363,9 @@ router.get('/settings', (req, res) => {
     if (settings.openai_api_key) {
       settings.openai_api_key_masked = settings.openai_api_key.slice(0, 4) + '...' + settings.openai_api_key.slice(-4);
     }
+    if (settings.smtp_pass) {
+      settings.smtp_pass_masked = '••••••••';
+    }
     res.json({ success: true, settings });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -309,7 +377,10 @@ router.post('/settings', (req, res) => {
   try {
     const allowedKeys = [
       'ai_provider', 'gemini_api_key', 'openai_api_key',
-      'budget_cap_usd', 'enable_cost_guard', 'fallback_to_free', 'max_leads_per_scan'
+      'budget_cap_usd', 'enable_cost_guard', 'fallback_to_free', 'max_leads_per_scan',
+      'email_mode', 'email_sender_name', 'email_sender_address', 'email_default_subject',
+      'smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_pass',
+      'whatsapp_mode', 'whatsapp_country_code'
     ];
 
     for (const key of allowedKeys) {
