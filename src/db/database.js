@@ -69,6 +69,30 @@ try {
   db.exec("ALTER TABLE projects ADD COLUMN target_criteria TEXT DEFAULT 'Businesses with NO website, operating via phone/social/directories (clinics, advocates, doctors, consultants)'");
 } catch (e) {}
 
+try {
+  db.exec("ALTER TABLE projects ADD COLUMN target_keywords TEXT DEFAULT ''");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE projects ADD COLUMN discovery_source TEXT DEFAULT 'combined'");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE leads ADD COLUMN address TEXT DEFAULT ''");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE leads ADD COLUMN map_url TEXT DEFAULT ''");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE leads ADD COLUMN signboard_photo_url TEXT DEFAULT ''");
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE leads ADD COLUMN signboard_extracted TEXT DEFAULT ''");
+} catch (e) {}
+
 // Default settings helper
 function initDefaultSettings() {
   const getSetting = db.prepare('SELECT value FROM settings WHERE key = ?');
@@ -78,6 +102,8 @@ function initDefaultSettings() {
     ai_provider: 'gemini', // 'gemini' | 'openai' | 'free_heuristics'
     gemini_api_key: '',
     openai_api_key: '',
+    google_places_api_key: '',
+    enable_signboard_vision: 'true', // Auto extract contacts from Google Maps / web storefront signboard photos
     budget_cap_usd: '2.00', // Hard cap limit in USD (e.g. $2.00)
     enable_cost_guard: 'true',
     fallback_to_free: 'true', // Seamlessly fallback to free local heuristics if budget cap is hit

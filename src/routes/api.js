@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db/database');
 const ScannerService = require('../services/scannerService');
 const AIService = require('../services/aiService');
+const SignboardService = require('../services/signboardService');
 const UsageGuard = require('../services/usageGuard');
 const OutreachService = require('../services/outreachService');
 
@@ -83,14 +84,14 @@ router.get('/projects', (req, res) => {
 // Create new project
 router.post('/projects', (req, res) => {
   try {
-    const { name, url, description, target_industry, target_region, target_criteria } = req.body;
+    const { name, url, description, target_industry, target_region, target_criteria, target_keywords, discovery_source } = req.body;
     if (!name || !description) {
       return res.status(400).json({ success: false, error: 'Project name and description are required' });
     }
 
     const stmt = db.prepare(`
-      INSERT INTO projects (name, url, description, target_industry, target_region, target_criteria)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO projects (name, url, description, target_industry, target_region, target_criteria, target_keywords, discovery_source)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const info = stmt.run(
       name, 
@@ -98,7 +99,9 @@ router.post('/projects', (req, res) => {
       description, 
       target_industry || '', 
       target_region || '', 
-      target_criteria || 'Businesses with NO website, operating via phone/social/directories'
+      target_criteria || 'Businesses with NO website, operating via phone/social/directories',
+      target_keywords || '',
+      discovery_source || 'combined'
     );
     
     const newProject = db.prepare('SELECT * FROM projects WHERE id = ?').get(info.lastInsertRowid);
@@ -111,12 +114,12 @@ router.post('/projects', (req, res) => {
 // Update project
 router.put('/projects/:id', (req, res) => {
   try {
-    const { name, url, description, target_industry, target_region, target_criteria } = req.body;
+    const { name, url, description, target_industry, target_region, target_criteria, target_keywords, discovery_source } = req.body;
     db.prepare(`
       UPDATE projects 
-      SET name = ?, url = ?, description = ?, target_industry = ?, target_region = ?, target_criteria = ?
+      SET name = ?, url = ?, description = ?, target_industry = ?, target_region = ?, target_criteria = ?, target_keywords = ?, discovery_source = ?
       WHERE id = ?
-    `).run(name, url || '', description, target_industry || '', target_region || '', target_criteria || '', req.params.id);
+    `).run(name, url || '', description, target_industry || '', target_region || '', target_criteria || '', target_keywords || '', discovery_source || 'combined', req.params.id);
 
     const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
     res.json({ success: true, project: updated });
@@ -163,7 +166,7 @@ router.post('/projects/:id/scan', async (req, res) => {
 // Get leads for project with optional filtering
 router.get('/projects/:id/leads', (req, res) => {
   try {
-    const { status, minScore, hasEmail, search, presence } = req.query;
+    const { presence, status, minScore, search, hasEmail, sortBy, sortDir } = req.query;
     let query = 'SELECT * FROM leads WHERE project_id = ?';
     const params = [req.params.id];
 
@@ -187,7 +190,16 @@ router.get('/projects/:id/leads', (req, res) => {
       params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
 
-    query += ' ORDER BY match_score DESC, created_at DESC';
+    const orderDirection = (sortDir || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+    if (sortBy === 'created_at' || sortBy === 'discovered') {
+      query += ` ORDER BY created_at ${orderDirection}, match_score DESC`;
+    } else if (sortBy === 'company_name' || sortBy === 'name') {
+      query += ` ORDER BY company_name ${orderDirection}`;
+    } else if (sortBy === 'score' || sortBy === 'match_score') {
+      query += ` ORDER BY match_score ${orderDirection}, created_at DESC`;
+    } else {
+      query += ` ORDER BY created_at DESC, match_score DESC`;
+    }
 
     const rawLeads = db.prepare(query).all(...params);
     const leads = rawLeads.map(l => ({
@@ -267,6 +279,87 @@ router.post('/leads/:id/send-whatsapp', (req, res) => {
   }
 });
 
+// Scan signboard photo for a lead on-demand
+router.post('/leads/:id/scan-signboard', async (req, res) => {
+  try {
+    const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
+
+    let { photoUrl } = req.body;
+
+    // If no custom photoUrl provided, attempt to fetch it automatically
+    if (!photoUrl) {
+      const photos = await SignboardService.fetchSignboardPhotos(lead.company_name, lead.address, lead.map_url);
+      if (photos.length === 0) {
+        return res.status(404).json({ success: false, error: 'No storefront or signboard photos found automatically. You can paste an image URL directly.' });
+      }
+      photoUrl = photos[0];
+    }
+
+    const downloaded = await SignboardService.downloadImageAsBase64(photoUrl);
+    if (!downloaded || !downloaded.base64) {
+      return res.status(400).json({ success: false, error: 'Failed to download image from the provided URL.' });
+    }
+
+    const extracted = await AIService.extractContactsFromImage(
+      downloaded.base64,
+      downloaded.mimeType,
+      {
+        company_name: lead.company_name,
+        address: lead.address
+      }
+    );
+
+    if (!extracted || (!extracted.found && (!extracted.phones || extracted.phones.length === 0))) {
+      return res.json({
+        success: false,
+        message: 'No readable contact details or phone numbers detected in this photo.',
+        photoUrl,
+        extracted
+      });
+    }
+
+    // Merge extracted phones and emails
+    const existingPhones = JSON.parse(lead.phones || '[]');
+    const existingEmails = JSON.parse(lead.emails || '[]');
+    const newPhones = Array.from(new Set([...existingPhones, ...(extracted.phones || [])]));
+    const newEmails = Array.from(new Set([...existingEmails, ...(extracted.emails || [])]));
+    let newContactName = lead.contact_name;
+    if (extracted.contact_name && (!newContactName || newContactName.endsWith('Office') || newContactName.endsWith('Desk'))) {
+      newContactName = extracted.contact_name;
+    }
+
+    db.prepare(`
+      UPDATE leads 
+      SET phones = ?, emails = ?, contact_name = ?, signboard_photo_url = ?, signboard_extracted = ?
+      WHERE id = ?
+    `).run(
+      JSON.stringify(newPhones),
+      JSON.stringify(newEmails),
+      newContactName,
+      photoUrl,
+      JSON.stringify(extracted),
+      lead.id
+    );
+
+    const updatedLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(lead.id);
+    res.json({
+      success: true,
+      message: `Extracted ${extracted.phones.length} phone numbers from signboard!`,
+      photoUrl,
+      extracted,
+      lead: {
+        ...updatedLead,
+        emails: JSON.parse(updatedLead.emails || '[]'),
+        phones: JSON.parse(updatedLead.phones || '[]'),
+        social_links: JSON.parse(updatedLead.social_links || '[]')
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Test SMTP connection
 router.post('/outreach/test-smtp', async (req, res) => {
   try {
@@ -275,6 +368,22 @@ router.post('/outreach/test-smtp', async (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// Delete all leads (optionally filtered by projectId)
+router.delete('/leads', (req, res) => {
+  try {
+    const { projectId } = req.query;
+    let info;
+    if (projectId) {
+      info = db.prepare('DELETE FROM leads WHERE project_id = ?').run(projectId);
+    } else {
+      info = db.prepare('DELETE FROM leads').run();
+    }
+    res.json({ success: true, deleted: info.changes });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -288,7 +397,7 @@ router.delete('/leads/:id', (req, res) => {
   }
 });
 
-// Export leads as CSV
+// Export leads as CSV for a specific project
 router.get('/projects/:id/export', (req, res) => {
   try {
     const project = db.prepare('SELECT name FROM projects WHERE id = ?').get(req.params.id);
@@ -328,6 +437,115 @@ router.get('/projects/:id/export', (req, res) => {
   }
 });
 
+// Export all projects as CSV
+router.get('/projects-export', (req, res) => {
+  try {
+    const rawProjects = db.prepare(`
+      SELECT p.*,
+        COUNT(l.id) as total_leads,
+        SUM(CASE WHEN l.web_presence_type = 'no_website' THEN 1 ELSE 0 END) as no_website_leads,
+        SUM(CASE WHEN l.match_score >= 80 THEN 1 ELSE 0 END) as high_match_leads,
+        SUM(CASE WHEN l.emails IS NOT NULL AND l.emails != '[]' AND l.emails != '' THEN 1 ELSE 0 END) as leads_with_emails
+      FROM projects p
+      LEFT JOIN leads l ON l.project_id = p.id
+      GROUP BY p.id
+      ORDER BY p.created_at DESC
+    `).all();
+
+    const headers = [
+      'Project ID',
+      'Project Name',
+      'URL',
+      'Description',
+      'Target Region',
+      'Target Industry',
+      'Discovery Source',
+      'Target Criteria',
+      'Target Keywords',
+      'Total Leads',
+      'No Website Leads',
+      'High Match Leads (80%+)',
+      'Verified Email Leads',
+      'Created At'
+    ];
+    const csvRows = [headers.join(',')];
+
+    for (const p of rawProjects) {
+      const row = [
+        p.id,
+        `"${(p.name || '').replace(/"/g, '""')}"`,
+        `"${(p.url || '').replace(/"/g, '""')}"`,
+        `"${(p.description || '').replace(/"/g, '""')}"`,
+        `"${(p.target_region || '').replace(/"/g, '""')}"`,
+        `"${(p.target_industry || '').replace(/"/g, '""')}"`,
+        `"${(p.discovery_source || 'combined').replace(/"/g, '""')}"`,
+        `"${(p.target_criteria || '').replace(/"/g, '""')}"`,
+        `"${(p.target_keywords || '').replace(/"/g, '""')}"`,
+        p.total_leads || 0,
+        p.no_website_leads || 0,
+        p.high_match_leads || 0,
+        p.leads_with_emails || 0,
+        `"${(p.created_at || '').replace(/"/g, '""')}"`
+      ];
+      csvRows.push(row.join(','));
+    }
+
+    const csvContent = csvRows.join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="all_projects.csv"');
+    res.send(csvContent);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Export all leads (or recent leads) as CSV
+router.get('/leads-export', (req, res) => {
+  try {
+    const limitClause = req.query.limit ? `LIMIT ${parseInt(req.query.limit, 10)}` : '';
+    const rawLeads = db.prepare(`
+      SELECT l.*, p.name as project_name
+      FROM leads l
+      LEFT JOIN projects p ON p.id = l.project_id
+      ORDER BY l.match_score DESC, l.created_at DESC
+      ${limitClause}
+    `).all();
+
+    const headers = ['Project Name', 'Company / Professional Name', 'Web Presence Type', 'Website URL', 'Contact Person', 'Emails', 'Phones', 'Social Links', 'Match Score', 'Match Reason', 'Outreach Pitch Draft', 'Status', 'Discovered At'];
+    const csvRows = [headers.join(',')];
+
+    for (const lead of rawLeads) {
+      const emails = JSON.parse(lead.emails || '[]').join('; ');
+      const phones = JSON.parse(lead.phones || '[]').join('; ');
+      const socials = JSON.parse(lead.social_links || '[]').join('; ');
+
+      const row = [
+        `"${(lead.project_name || '').replace(/"/g, '""')}"`,
+        `"${(lead.company_name || '').replace(/"/g, '""')}"`,
+        `"${lead.web_presence_type || 'no_website'}"`,
+        `"${(lead.website_url || '').replace(/"/g, '""')}"`,
+        `"${(lead.contact_name || '').replace(/"/g, '""')}"`,
+        `"${emails.replace(/"/g, '""')}"`,
+        `"${phones.replace(/"/g, '""')}"`,
+        `"${socials.replace(/"/g, '""')}"`,
+        lead.match_score,
+        `"${(lead.match_reason || '').replace(/"/g, '""')}"`,
+        `"${(lead.pitch_draft || '').replace(/"/g, '""')}"`,
+        `"${lead.status || 'new'}"`,
+        `"${lead.created_at || ''}"`
+      ];
+      csvRows.push(row.join(','));
+    }
+
+    const csvContent = csvRows.join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="leads_export.csv"');
+    res.send(csvContent);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 /* ------------------- USAGE & SETTINGS ------------------- */
 
 // Get current AI usage and budget stats
@@ -356,12 +574,36 @@ router.get('/settings', (req, res) => {
     const rows = db.prepare('SELECT key, value FROM settings').all();
     const settings = {};
     rows.forEach(r => settings[r.key] = r.value);
+    // Check both database and process.env
+    const envGemini = (process.env.GEMINI_API_KEY || '').trim();
+    const envOpenAI = (process.env.OPENAI_API_KEY || '').trim();
+    const envPlaces = (process.env.GOOGLE_PLACES_API_KEY || '').trim();
+
+    const effectiveGemini = (settings.gemini_api_key || envGemini).trim();
+    const effectiveOpenAI = (settings.openai_api_key || envOpenAI).trim();
+    const effectivePlaces = (settings.google_places_api_key || envPlaces).trim();
+
+    settings.gemini_source = settings.gemini_api_key ? 'saved' : (envGemini ? 'env' : 'none');
+    settings.openai_source = settings.openai_api_key ? 'saved' : (envOpenAI ? 'env' : 'none');
+    settings.places_source = settings.google_places_api_key ? 'saved' : (envPlaces ? 'env' : 'none');
+
+    settings.gemini_api_key = effectiveGemini;
+    settings.openai_api_key = effectiveOpenAI;
+    settings.google_places_api_key = effectivePlaces;
+
+    settings.has_gemini_key = Boolean(effectiveGemini);
+    settings.has_openai_key = Boolean(effectiveOpenAI);
+    settings.has_places_key = Boolean(effectivePlaces);
+
     // Mask sensitive keys for client
-    if (settings.gemini_api_key) {
-      settings.gemini_api_key_masked = settings.gemini_api_key.slice(0, 4) + '...' + settings.gemini_api_key.slice(-4);
+    if (effectiveGemini) {
+      settings.gemini_api_key_masked = effectiveGemini.slice(0, 6) + '...' + effectiveGemini.slice(-4);
     }
-    if (settings.openai_api_key) {
-      settings.openai_api_key_masked = settings.openai_api_key.slice(0, 4) + '...' + settings.openai_api_key.slice(-4);
+    if (effectiveOpenAI) {
+      settings.openai_api_key_masked = effectiveOpenAI.slice(0, 6) + '...' + effectiveOpenAI.slice(-4);
+    }
+    if (effectivePlaces) {
+      settings.google_places_api_key_masked = effectivePlaces.slice(0, 6) + '...' + effectivePlaces.slice(-4);
     }
     if (settings.smtp_pass) {
       settings.smtp_pass_masked = '••••••••';
@@ -376,7 +618,7 @@ router.get('/settings', (req, res) => {
 router.post('/settings', (req, res) => {
   try {
     const allowedKeys = [
-      'ai_provider', 'gemini_api_key', 'openai_api_key',
+      'ai_provider', 'gemini_api_key', 'openai_api_key', 'google_places_api_key', 'enable_signboard_vision',
       'budget_cap_usd', 'enable_cost_guard', 'fallback_to_free', 'max_leads_per_scan',
       'email_mode', 'email_sender_name', 'email_sender_address', 'email_default_subject',
       'smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_pass',

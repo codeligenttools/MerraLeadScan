@@ -78,11 +78,20 @@ class ScraperService {
       if (this.isValidEmail(email)) contacts.emails.add(email);
     });
 
-    // 2. Tel links
-    $('a[href^="tel:"]').each((_, el) => {
+    // 2. Tel & WhatsApp links
+    $('a[href]').each((_, el) => {
       const href = $(el).attr('href') || '';
-      const phone = href.replace(/^tel:/i, '').trim();
-      if (phone.length >= 7) contacts.phones.add(phone);
+      if (href.startsWith('tel:')) {
+        const phone = href.replace(/^tel:/i, '').trim();
+        if (phone.length >= 7) contacts.phones.add(phone);
+      } else if (href.includes('wa.me/') || href.includes('api.whatsapp.com/send')) {
+        contacts.social_links.add(href);
+        const waMatch = href.match(/(?:wa\.me\/|phone=)(\+?\d+)/);
+        if (waMatch && waMatch[1].length >= 10) {
+          const num = waMatch[1].startsWith('+') ? waMatch[1] : `+${waMatch[1]}`;
+          contacts.phones.add(num);
+        }
+      }
     });
 
     // 3. Social links
@@ -93,6 +102,8 @@ class ScraperService {
       } else if (href.includes('twitter.com/') || href.includes('x.com/')) {
         contacts.social_links.add(href);
       } else if (href.includes('instagram.com/')) {
+        contacts.social_links.add(href);
+      } else if (href.includes('facebook.com/') && !href.includes('sharer') && !href.includes('share.php')) {
         contacts.social_links.add(href);
       }
     });
@@ -105,7 +116,28 @@ class ScraperService {
       if (this.isValidEmail(email)) contacts.emails.add(email);
     }
 
-    // 5. Look for Founder/Contact name in about/team
+    // 5. Raw text regex for phone numbers
+    // Mobile numbers (Indian 10-digit with optional +91/0)
+    const indianMobileRegex = /(?:(?:\+91|0)[-\s]?)?([6-9]\d{4}[-\s]?\d{5})\b/g;
+    let pm;
+    while ((pm = indianMobileRegex.exec(bodyText)) !== null) {
+      const raw = pm[0].replace(/[^\d+]/g, '');
+      if (raw.length >= 10 && raw.length <= 13) {
+        contacts.phones.add(raw.startsWith('+') ? raw : (raw.length === 10 ? `+91 ${raw}` : raw));
+      }
+    }
+
+    // Explicit Call / WhatsApp / Contact numbers in text
+    const explicitPhoneRegex = /(?:call|whatsapp|phone|ph|mobile|contact|tel)[:\s]*([+\d\s-]{8,16})/gi;
+    while ((pm = explicitPhoneRegex.exec(bodyText)) !== null) {
+      const candidate = pm[1].trim();
+      const digits = candidate.replace(/\D/g, '');
+      if (digits.length >= 10 && digits.length <= 13) {
+        contacts.phones.add(candidate.replace(/\s+/g, ' '));
+      }
+    }
+
+    // 6. Look for Founder/Contact name in about/team
     if (!contacts.contact_name) {
       const metaAuthor = $('meta[name="author"]').attr('content');
       if (metaAuthor && metaAuthor.length < 40) {

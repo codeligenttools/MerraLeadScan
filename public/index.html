@@ -62,14 +62,6 @@
           </svg>
           Settings
         </button>
-
-        <button class="btn btn-primary" id="btnNewProject">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          New Project
-        </button>
       </div>
     </header>
 
@@ -165,23 +157,67 @@
             <!-- Populated dynamically via JS -->
           </div>
         </div>
+
+
       </div>
 
       <!-- ================= VIEW 2: ALL PROJECTS LIST ================= -->
       <div id="viewProjects" class="view-section hidden">
         <div class="projects-view-header">
-          <div>
+          <div class="header-titles">
             <h2>Monitored Projects</h2>
-            <p class="subtitle">Click any project to view its matching leads, edit search criteria, or launch scans.</p>
+            <p class="subtitle">Manage monitored initiatives, edit search criteria, or launch instant lead discovery scans.</p>
           </div>
-          <button class="btn btn-primary" onclick="document.getElementById('modalNewProject').classList.remove('hidden')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Add New Project
-          </button>
+          <div class="projects-header-actions">
+            <div class="search-input-wrap">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="projectSearchInput" placeholder="Filter projects by name, niche...">
+            </div>
+
+            <!-- View Mode Toggle: Cards vs List for Projects -->
+            <div class="view-mode-toggle" id="projViewModeToggle">
+              <button type="button" class="btn-toggle-view active" id="btnProjViewCards" title="Card Grid View">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span>Cards</span>
+              </button>
+              <button type="button" class="btn-toggle-view" id="btnProjViewList" title="Data Table List View">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                <span>List</span>
+              </button>
+            </div>
+
+            <button class="btn btn-secondary btn-icon-only" id="btnExportProjectsCSV" title="Export to CSV">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </button>
+
+            <button class="btn btn-primary" onclick="openCreateProjectModal()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Add New Project</span>
+            </button>
+          </div>
         </div>
 
         <div class="projects-grid" id="allProjectsGrid">
           <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Projects Pagination Bar -->
+        <div class="leads-pagination-bar hidden" id="projectsPaginationBar">
+          <div class="pagination-info">
+            <span>Showing <strong id="projPaginationRangeText">0–0</strong> of <strong id="projPaginationTotalText">0</strong> projects</span>
+            <div class="pagination-page-size">
+              <label for="projPageSizeSelect">Per page:</label>
+              <select id="projPageSizeSelect" class="styled-select-sm">
+                <option value="6" selected>6</option>
+                <option value="12">12</option>
+                <option value="24">24</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+          </div>
+          <div class="pagination-nav" id="projPaginationNav">
+            <!-- Populated dynamically via JS -->
+          </div>
         </div>
       </div>
 
@@ -335,6 +371,14 @@
               <option value="90">Match ≥ 90%</option>
             </select>
 
+            <select id="sortFilter" class="styled-select-sm" title="Sort Leads">
+              <option value="created_desc" selected>📅 Latest Discovered</option>
+              <option value="created_asc">📅 Oldest Discovered</option>
+              <option value="score_desc">⚡ Highest Match</option>
+              <option value="score_asc">⚡ Lowest Match</option>
+              <option value="name_asc">🏢 Company (A–Z)</option>
+            </select>
+
             <label class="checkbox-label">
               <input type="checkbox" id="hasEmailFilter">
               <span>Has Email</span>
@@ -342,9 +386,24 @@
           </div>
 
           <div class="export-actions">
-            <button class="btn btn-secondary" id="btnExportCSV">
+            <!-- View Mode Toggle: Cards vs List (MOVED TO RIGHT) -->
+            <div class="view-mode-toggle" id="viewModeToggle">
+              <button type="button" class="btn-toggle-view active" id="btnViewCards" title="Card Grid View">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span>Cards</span>
+              </button>
+              <button type="button" class="btn-toggle-view" id="btnViewList" title="Data Table List View">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                <span>List</span>
+              </button>
+            </div>
+
+            <button class="btn btn-secondary btn-icon-only" id="btnExportCSV" title="Export to CSV">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              Export to CSV
+            </button>
+            <button class="btn btn-danger-outline" id="btnDeleteProjectLeads" title="Delete all leads for this project">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+              Delete Leads
             </button>
           </div>
         </div>
@@ -352,6 +411,25 @@
         <!-- Leads List -->
         <div class="leads-container" id="leadsContainer">
           <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Leads Pagination Bar -->
+        <div class="leads-pagination-bar hidden" id="leadsPaginationBar">
+          <div class="pagination-info">
+            <span>Showing <strong id="paginationRangeText">0–0</strong> of <strong id="paginationTotalText">0</strong> leads</span>
+            <div class="pagination-page-size">
+              <label for="pageSizeSelect">Per page:</label>
+              <select id="pageSizeSelect" class="styled-select-sm">
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+          </div>
+          <div class="pagination-nav" id="paginationNav">
+            <!-- Populated dynamically via JS -->
+          </div>
         </div>
 
         <!-- Empty State -->
@@ -403,10 +481,59 @@
           
           <div class="criteria-presets">
             <span class="preset-label">Quick Presets:</span>
+            <button type="button" class="preset-chip" onclick="applyPresetCriteria('maps')">📍 Google Maps & Local Places (High Success)</button>
             <button type="button" class="preset-chip" onclick="applyPresetCriteria('no_website')">🔥 No Website (Clinics, Advocates, Doctors)</button>
             <button type="button" class="preset-chip" onclick="applyPresetCriteria('social_only')">📱 Social Profile Only (IG/FB)</button>
-            <button type="button" class="preset-chip" onclick="applyPresetCriteria('b2b')">🏢 B2B Companies Needing Revamp</button>
+            <button type="button" class="preset-chip" onclick="applyPresetCriteria('b2b')">🏢 B2B Companies</button>
           </div>
+        </div>
+
+        <!-- Lead Discovery Source (Maps vs Web vs Combined) -->
+        <div class="form-group">
+          <label>📍 Lead Discovery Source</label>
+          <div class="discovery-source-selector">
+            <label class="discovery-source-card">
+              <input type="radio" name="discoverySource" value="maps" id="srcMaps">
+              <div class="source-card-content">
+                <div class="source-card-title">
+                  <span class="source-icon">📍</span>
+                  <strong>Local Maps & Places</strong>
+                </div>
+                <p class="source-card-desc">Searches Google Maps & OpenStreetMap for verified local businesses, physical addresses & phone numbers.</p>
+              </div>
+            </label>
+
+            <label class="discovery-source-card">
+              <input type="radio" name="discoverySource" value="combined" id="srcCombined" checked>
+              <div class="source-card-content">
+                <div class="source-card-title">
+                  <span class="source-icon">⚡</span>
+                  <strong>Combined (Maps + Web)</strong>
+                  <span class="badge-recommended">Recommended</span>
+                </div>
+                <p class="source-card-desc">Simultaneously scans Google Maps, OpenStreetMap, and web directories to maximize lead volume.</p>
+              </div>
+            </label>
+
+            <label class="discovery-source-card">
+              <input type="radio" name="discoverySource" value="web" id="srcWeb">
+              <div class="source-card-content">
+                <div class="source-card-title">
+                  <span class="source-icon">🌐</span>
+                  <strong>Web & Social Only</strong>
+                </div>
+                <p class="source-card-desc">Searches web directories, Instagram, Facebook, and search engines for online businesses.</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="label-with-link">
+            <label for="inputProjKeywords">🔍 Target Search Keywords & Specific Niches</label>
+            <span class="help-text">Comma-separated terms to search</span>
+          </div>
+          <input type="text" id="inputProjKeywords" placeholder="e.g. dental clinic, advocate chamber, dermatologist, tax consultant">
         </div>
 
         <div class="form-row">
@@ -470,15 +597,63 @@
               <label for="inputGeminiKey">Google Gemini API Key</label>
               <a href="https://aistudio.google.com/" target="_blank" class="text-link">Get Free Key (Google AI Studio) &rarr;</a>
             </div>
-            <input type="password" id="inputGeminiKey" placeholder="AIzaSy... (Leave empty to use Free Heuristics)">
+            <div class="input-with-action">
+              <input type="password" id="inputGeminiKey" placeholder="AIzaSy... (Leave empty to use Free Heuristics)">
+              <button type="button" class="btn-input-action" id="btnToggleGeminiKey" title="Show / Hide Key">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </button>
+            </div>
+            <div id="statusGeminiKey" class="key-status-indicator"></div>
             <span class="help-text">Free tier offers up to 15 requests/min with zero cost.</span>
           </div>
 
           <!-- OpenAI API Key -->
           <div class="form-group hidden" id="groupOpenAIKey">
-            <label for="inputOpenAIKey">OpenAI API Key</label>
-            <input type="password" id="inputOpenAIKey" placeholder="sk-...">
+            <div class="label-with-link">
+              <label for="inputOpenAIKey">OpenAI API Key</label>
+              <a href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" class="text-link">Check Balance (OpenAI Billing) &rarr;</a>
+            </div>
+            <div class="input-with-action">
+              <input type="password" id="inputOpenAIKey" placeholder="sk-...">
+              <button type="button" class="btn-input-action" id="btnToggleOpenAIKey" title="Show / Hide Key">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </button>
+            </div>
+            <div id="statusOpenAIKey" class="key-status-indicator"></div>
             <span class="help-text">Uses gpt-4o-mini (~$0.15 per million tokens).</span>
+          </div>
+
+          <!-- Storefront Signboard Vision (Google Maps OCR) -->
+          <div class="channel-config-card" style="margin-bottom: 20px;">
+            <div class="channel-header">
+              <div class="channel-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                <h4>Storefront Signboard Vision (Google Maps OCR)</h4>
+              </div>
+              <span class="badge-status">AI Vision</span>
+            </div>
+
+            <div class="checkbox-group" style="margin-bottom: 12px;">
+              <label class="checkbox-label">
+                <input type="checkbox" id="checkEnableSignboardVision" checked>
+                <span><strong>Automated Signboard OCR:</strong> When a discovered lead lacks a phone number, automatically fetch storefront/signboard photos and extract mobile, WhatsApp & doctor/advocate names using Gemini Vision.</span>
+              </label>
+            </div>
+
+            <div class="form-group" id="groupPlacesKey" style="margin-bottom: 0;">
+              <div class="label-with-link">
+                <label for="inputPlacesKey">Google Places API Key (Optional)</label>
+                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="text-link">Get Key (Google Cloud) &rarr;</a>
+              </div>
+              <div class="input-with-action">
+                <input type="password" id="inputPlacesKey" placeholder="AIzaSy... (Leave empty for free web image search)">
+                <button type="button" class="btn-input-action" id="btnTogglePlacesKey" title="Show / Hide Key">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </button>
+              </div>
+              <div id="statusPlacesKey" class="key-status-indicator"></div>
+              <span class="help-text">Directly retrieves authentic Google Maps place photos. If left empty, free web image search is automatically used with zero setup.</span>
+            </div>
           </div>
 
           <!-- Cost Guard Hard Limit -->
@@ -701,6 +876,41 @@
           </button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Scan Signboard Photo -->
+  <div class="modal-overlay hidden" id="modalScanSignboard">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2>📷 Scan Signboard / Nameboard Photo</h2>
+          <p class="modal-subtitle" id="modalScanLeadName">Extract contact numbers using Gemini Vision AI</p>
+        </div>
+        <button class="btn-close" id="btnCloseScanSignboard">&times;</button>
+      </div>
+      <form id="formScanSignboard">
+        <input type="hidden" id="scanLeadId" value="">
+
+        <div class="form-group">
+          <label for="inputCustomPhotoUrl">Signboard Photo URL (Optional)</label>
+          <input type="url" id="inputCustomPhotoUrl" placeholder="https://... (Leave empty to auto-fetch from Maps/Web)">
+          <span class="help-text">You can paste any Google Maps photo URL or direct image URL of the business storefront/board.</span>
+        </div>
+
+        <div id="scanPreviewContainer" class="signboard-preview-box hidden">
+          <img id="scanPreviewImg" src="" alt="Signboard Preview">
+          <div id="scanResultInfo" class="signboard-result-info"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btnCancelScanSignboard">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnStartScanSignboard">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span>Scan with Vision AI</span>
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 

@@ -56,8 +56,8 @@ class UsageGuard {
       enableCostGuard,
       fallbackToFree,
       provider: this.getSetting('ai_provider', 'gemini'),
-      hasGeminiKey: Boolean(this.getSetting('gemini_api_key')),
-      hasOpenAIKey: Boolean(this.getSetting('openai_api_key'))
+      hasGeminiKey: Boolean(this.getSetting('gemini_api_key') || (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim())),
+      hasOpenAIKey: Boolean(this.getSetting('openai_api_key') || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()))
     };
   }
 

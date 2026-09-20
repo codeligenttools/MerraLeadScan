@@ -2,6 +2,8 @@ const db = require('../db/database');
 const AIService = require('./aiService');
 const SearchService = require('./searchService');
 const ScraperService = require('./scraperService');
+const MapService = require('./mapService');
+const SignboardService = require('./signboardService');
 const UsageGuard = require('./usageGuard');
 
 class ScannerService {
@@ -22,63 +24,104 @@ class ScannerService {
       leads: []
     };
 
-    console.log(`[ScannerService] Starting scan for "${project.name}" (Max: ${limit} leads)...`);
+    const discoverySource = project.discovery_source || 'combined';
+    console.log(`[ScannerService] Starting scan for "${project.name}" (Source: ${discoverySource}, Max: ${limit} leads)...`);
 
-    // 1. Analyze Project ICP & generate search queries
-    const analysis = await AIService.analyzeProject(project);
-    const queries = analysis.searchQueries || [
-      `"contact us" ${project.target_industry || 'business'} ${project.target_region || ''}`,
-      `"about us" ${project.name} ${project.target_region || ''}`
-    ];
+    const discoveredMap = new Map(); // uniqueKey -> lead
 
-    console.log(`[ScannerService] Generated ${queries.length} search queries.`);
-
-    // 2. Discover potential leads across queries
-    const discoveredMap = new Map(); // domain -> lead
-    for (const query of queries) {
-      if (discoveredMap.size >= limit * 2) break;
+    // 1. Map Discovery (if source is 'maps' or 'combined')
+    if (discoverySource === 'maps' || discoverySource === 'combined') {
       try {
-        const found = await SearchService.search(query, 8);
-        for (const item of found) {
-          try {
-            const domain = new URL(item.website_url).hostname.replace(/^www\./, '');
-            if (!discoveredMap.has(domain) && !item.website_url.includes(project.url || 'entepage.com')) {
-              discoveredMap.set(domain, item);
-            }
-          } catch (e) {}
+        const mapLeads = await MapService.discoverLeads(project, limit * 2);
+        for (const item of mapLeads) {
+          const uniqueKey = (item.company_name + (item.address || '')).toLowerCase().trim();
+          if (!discoveredMap.has(uniqueKey)) {
+            discoveredMap.set(uniqueKey, item);
+          }
         }
+        console.log(`[ScannerService] Discovered ${discoveredMap.size} candidates from Maps.`);
       } catch (err) {
-        console.warn(`[ScannerService] Query failed: ${query}`, err.message);
+        console.warn(`[ScannerService] Map discovery failed:`, err.message);
       }
     }
 
-    // 3. Fallback seeds if search engine returned very few results
-    if (discoveredMap.size < 3) {
-      this.injectFallbackCandidates(project, discoveredMap);
+    // 2. Web & Social Discovery (if source is 'web' or 'combined' or if map found fewer than limit)
+    if (discoverySource === 'web' || discoverySource === 'combined' || discoveredMap.size < limit) {
+      const analysis = await AIService.analyzeProject(project);
+      const queries = analysis.searchQueries || [
+        `"contact us" ${project.target_industry || 'business'} ${project.target_region || ''}`,
+        `"about us" ${project.name} ${project.target_region || ''}`
+      ];
+
+      console.log(`[ScannerService] Running ${queries.length} web search queries...`);
+
+      for (const query of queries) {
+        if (discoveredMap.size >= limit * 2) break;
+        try {
+          const found = await SearchService.search(query, 8);
+          for (const item of found) {
+            try {
+              const uniqueKey = (item.website_url || (item.social_links && item.social_links[0]) || item.company_name).toLowerCase().trim();
+              const isSelf = project.url && item.website_url && item.website_url.includes(project.url);
+              
+              if (uniqueKey && !discoveredMap.has(uniqueKey) && !isSelf) {
+                discoveredMap.set(uniqueKey, item);
+              }
+            } catch (e) {}
+          }
+        } catch (err) {
+          console.warn(`[ScannerService] Query failed: ${query}`, err.message);
+        }
+      }
     }
 
     results.totalDiscovered = discoveredMap.size;
-    const candidates = Array.from(discoveredMap.values()).slice(0, limit);
 
-    // 4. Scrape contacts, score with AI, and store
+    // 3. Scrape contacts, score with AI, and store candidates
     const insertLeadStmt = db.prepare(`
       INSERT INTO leads (
         project_id, company_name, website_url, web_presence_type, contact_name, 
-        emails, phones, social_links, match_score, match_reason, pitch_draft, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')
+        emails, phones, social_links, match_score, match_reason, pitch_draft, status,
+        address, map_url, signboard_photo_url, signboard_extracted
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?, ?)
     `);
 
-    for (const candidate of candidates) {
+    for (const candidate of discoveredMap.values()) {
+      if (results.leadsSaved >= limit) break;
+
       try {
         console.log(`[ScannerService] Evaluating candidate: ${candidate.company_name} (${candidate.web_presence_type})`);
         
-        // If candidate has a website, scrape it, otherwise use available contacts
-        if (candidate.website_url && candidate.web_presence_type !== 'no_website') {
-          const contacts = await ScraperService.extractContacts(candidate.website_url);
-          candidate.emails = Array.from(new Set([...(candidate.emails || []), ...contacts.emails]));
-          candidate.phones = Array.from(new Set([...(candidate.phones || []), ...contacts.phones]));
-          candidate.social_links = Array.from(new Set([...(candidate.social_links || []), ...contacts.social_links]));
-          if (!candidate.contact_name) candidate.contact_name = contacts.contact_name;
+        // If candidate has a standalone website, scrape it for additional contacts
+        if (candidate.website_url && candidate.web_presence_type === 'has_website') {
+          try {
+            const contacts = await ScraperService.extractContacts(candidate.website_url);
+            candidate.emails = Array.from(new Set([...(candidate.emails || []), ...contacts.emails]));
+            candidate.phones = Array.from(new Set([...(candidate.phones || []), ...contacts.phones]));
+            candidate.social_links = Array.from(new Set([...(candidate.social_links || []), ...contacts.social_links]));
+            if (!candidate.contact_name) candidate.contact_name = contacts.contact_name;
+          } catch (scrapeErr) {}
+        }
+
+        // Automated Signboard Vision OCR: If candidate has no phone number, attempt extraction from storefront/nameboard photo
+        const hasDirectPhone = Array.isArray(candidate.phones) && candidate.phones.length > 0;
+        if (!hasDirectPhone) {
+          try {
+            await SignboardService.processCandidate(candidate);
+          } catch (signboardErr) {
+            console.warn(`[ScannerService] Signboard processing error for "${candidate.company_name}":`, signboardErr.message);
+          }
+        }
+
+        // Contact verification: must have phone, email, social, or verified map presence
+        const hasPhone = Array.isArray(candidate.phones) && candidate.phones.length > 0;
+        const hasEmail = Array.isArray(candidate.emails) && candidate.emails.length > 0;
+        const hasSocial = Array.isArray(candidate.social_links) && candidate.social_links.length > 0;
+        const hasMap = Boolean(candidate.map_url && candidate.address);
+
+        if (!hasPhone && !hasEmail && !hasSocial && !hasMap) {
+          console.log(`[ScannerService] Skipping "${candidate.company_name}" - No phone, email, social, or map location found.`);
+          continue;
         }
 
         // AI match score & pitch draft
@@ -99,7 +142,11 @@ class ScannerService {
           JSON.stringify(candidate.social_links || []),
           candidate.match_score,
           candidate.match_reason,
-          candidate.pitch_draft
+          candidate.pitch_draft,
+          candidate.address || '',
+          candidate.map_url || '',
+          candidate.signboard_photo_url || '',
+          candidate.signboard_extracted || ''
         );
 
         candidate.id = inserted.lastInsertRowid;
@@ -111,77 +158,6 @@ class ScannerService {
     }
 
     console.log(`[ScannerService] Scan complete! Saved ${results.leadsSaved} leads.`);
-    return results;
-  }
-
-  /**
-   * High quality relevant leads specifically targeting clinics, advocates, doctors, and consultants WITHOUT websites
-   */
-  static injectFallbackCandidates(project, map) {
-    const seeds = [
-      {
-        company_name: 'Dr. K. R. Menon Child & Dental Clinic',
-        website_url: '',
-        web_presence_type: 'no_website',
-        category: 'Dental & Pediatric Clinic',
-        contact_name: 'Dr. K. R. Menon, BDS, MDS',
-        phones: ['+91 98470 23145'],
-        emails: ['dr.krmenon.clinic@gmail.com'],
-        social_links: ['https://instagram.com/menondentalcare'],
-        snippet: 'Local clinic listed on Google Maps & Practo. Receives appointments via direct WhatsApp. Does not possess an official website domain.'
-      },
-      {
-        company_name: 'Advocate Ramesh V. Sharma & Associates',
-        website_url: '',
-        web_presence_type: 'no_website',
-        category: 'Legal Chambers & High Court Advocate',
-        contact_name: 'Adv. Ramesh V. Sharma',
-        phones: ['+91 98201 44589', '+91 22 2456 7890'],
-        emails: ['ramesh.sharma.advocate@yahoo.in'],
-        social_links: ['https://linkedin.com/in/ramesh-sharma-advocate'],
-        snippet: 'Senior advocate practicing Civil and Commercial Litigation. Listed in Bar Council registry. Operates without an official website or web microsite.'
-      },
-      {
-        company_name: 'Dr. Priya S. Nambiar Homeopathy & Holistic Care',
-        website_url: 'https://instagram.com/drpriya_holistic',
-        web_presence_type: 'social_only',
-        category: 'Doctor / Wellness Practitioner',
-        contact_name: 'Dr. Priya S. Nambiar',
-        phones: ['+91 94471 88902'],
-        emails: ['drpriya.nambiar@gmail.com'],
-        social_links: ['https://instagram.com/drpriya_holistic', 'https://facebook.com/drpriyaholistic'],
-        snippet: 'Popular holistic doctor operating solely through Instagram and Facebook pages with WhatsApp booking link in bio. No standalone website.'
-      },
-      {
-        company_name: 'Agarwal & Co. Chartered Accountants',
-        website_url: '',
-        web_presence_type: 'no_website',
-        category: 'Tax, Audit & Financial Advisory',
-        contact_name: 'CA Ankit Agarwal, FCA',
-        phones: ['+91 98110 54321'],
-        emails: ['ankit.agarwal.ca@gmail.com'],
-        social_links: [],
-        snippet: 'Chartered Accountancy firm handling GST and corporate compliance. Listed on local directory without an active website.'
-      },
-      {
-        company_name: 'Aura Aesthetics & Laser Dermatology',
-        website_url: 'https://facebook.com/auraclinicaesthetics',
-        web_presence_type: 'social_only',
-        category: 'Dermatology & Skin Clinic',
-        contact_name: 'Dr. Sunita Rao, MD (Dermatology)',
-        phones: ['+91 97112 34567'],
-        emails: ['info.auraskinlaser@gmail.com'],
-        social_links: ['https://facebook.com/auraclinicaesthetics'],
-        snippet: 'Skin & cosmetic clinic in urban center with active Facebook promotions but lacking a dedicated branded website.'
-      }
-    ];
-
-    for (const seed of seeds) {
-      const key = seed.company_name;
-      if (!map.has(key)) {
-        map.set(key, seed);
-      }
-    }
   }
 }
 
