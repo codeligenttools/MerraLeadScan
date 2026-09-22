@@ -9,7 +9,7 @@ const db = require('./src/db/database');
 const apiRoutes = require('./src/routes/api');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -58,9 +58,23 @@ function seedInitialProject() {
 
 seedInitialProject();
 
-app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`🚀 MerraLeadScan is running at http://localhost:${PORT}`);
-  console.log(`💡 Cost Guard & Budget Limiter Active`);
-  console.log(`====================================================`);
-});
+function startServer(port) {
+  const server = app.listen(port, () => {
+    console.log(`====================================================`);
+    console.log(`🚀 MerraLeadScan is running at http://localhost:${port}`);
+    console.log(`💡 Cost Guard & Budget Limiter Active`);
+    console.log(`====================================================`);
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`[Server] Port ${port} is already in use, trying port ${port + 1}...`);
+      startServer(port + 1);
+    } else {
+      console.error('[Server] Fatal error:', err);
+      process.exit(1);
+    }
+  });
+}
+
+startServer(DEFAULT_PORT);
